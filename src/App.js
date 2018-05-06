@@ -96,9 +96,13 @@ class App extends Component {
       })
     })
 
-    if (mappedLanguages.length === 0) return
+    if (mappedLanguages.length === 0) {
+      return this.setState({ skills: [] })
+    }
 
-    this.setState({ skills: this.skillsMap(mappedLanguages).filter(l => l.pourcent > 1) })
+    return this.setState({
+      skills: this.skillsMap(mappedLanguages).filter(l => l.pourcent > 1),
+    })
   }
 
   skillsMap = (skills) => {

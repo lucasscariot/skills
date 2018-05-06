@@ -1,8 +1,20 @@
 import React, { Component } from 'react'
 import axios from 'axios'
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts'
-import { Row, Col, List, Tabs, Layout, Form, Input, Button, Badge, Tooltip } from 'antd'
+import {
+  Row,
+  Col,
+  List,
+  Tabs,
+  Layout,
+  Form,
+  Input,
+  Button,
+  Badge,
+  Tooltip,
+} from 'antd'
 import _ from 'lodash'
+
 import 'antd/dist/antd.css'
 
 import './App.css'
@@ -120,7 +132,7 @@ class App extends Component {
         return type
     }
   }
-  
+
   onChangeTab = async (index) => {
     const { repos, activity } = this.state
 
@@ -140,7 +152,7 @@ class App extends Component {
     return (
       <Layout>
         <Header style={{ color: 'white' }}>
-        <Tooltip placement="bottom" title={user.hireable ? 'Open to job offers' : 'Not open to job offers'}>
+          <Tooltip placement="bottom" title={user.hireable ? 'Open to job offers' : 'Not open to job offers'}>
             {user.name} {user.location ? `| ${user.location}` : ''}
             <Badge style={{ marginLeft: 10 }} status={user.hireable ? 'success' : 'error'} />
           </Tooltip>
@@ -148,7 +160,7 @@ class App extends Component {
           <b style={{ marginLeft: 20 }}>{user.email ? `- ${user.email}` : ''}</b>
         </Header>
         <Row gutter={48} style={{ background: '#fff' }}>
-          <Col span={8}>
+          <Col span={12}>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30 }}>
               <div>
                 <Form layout="inline" style={{ display: 'flex', justifyContent: 'center' }} >
@@ -174,7 +186,7 @@ class App extends Component {
               </div>
             </div>
           </Col>
-          <Col span={10}>
+          <Col span={12}>
             <Tabs
               defaultActiveKey={currentTab}
               onChange={this.onChangeTab}

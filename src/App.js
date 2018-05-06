@@ -1,13 +1,13 @@
 import React, { Component } from 'react'
 import axios from 'axios'
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts'
-import { Row, Col, List, Tabs, Layout, Form, Input, Button } from 'antd'
+import { Row, Col, List, Tabs, Layout, Form, Input, Button, Badge, Tooltip } from 'antd'
 import _ from 'lodash'
 import 'antd/dist/antd.css'
 
 import './App.css'
 
-const { Header, Content } = Layout
+const { Header } = Layout
 const { TabPane } = Tabs
 
 const GITHUB_KEY = '?access_token=027c1d26e0734fe194f9f1c78db04ba4c1b2d020'
@@ -22,10 +22,23 @@ class App extends Component {
       skills: [],
       activity: [],
       currentTab: '1',
+      user: {},
     }
   }
 
+  async componentDidMount() {
+    await this.fetchData()
+  }
+
+  onChange = e => this.setState({ username: e.target.value })
+
   getUser = async () => {
+    const { username } = this.state
+    const { data } = await axios(`https://api.github.com/users/${username}${GITHUB_KEY}`)
+    this.setState({ user: data })
+  }
+
+  getRepos = async () => {
     const { username } = this.state
     const { data } = await axios(`https://api.github.com/users/${username}/repos${GITHUB_KEY}`)
     this.setState({ repos: data.filter(repo => !repo.fork) })
@@ -36,20 +49,21 @@ class App extends Component {
     return data
   }
 
-  skillsMap = (skills) => {
-    const { size } = skills.reduce((a, b) => ({ size: a.size + b.size }))
-
-    return _.sortBy(skills.map(skill => ({
-      ...skill,
-      pourcent: _.round((100 * skill.size) / size, 1),
-    })), ['size']).reverse()
+  getActivity = async () => {
+    const { username } = this.state
+    const { data } = await axios(`https://api.github.com/users/${username}/events${GITHUB_KEY}`)
+    this.setState({ activity: data })
   }
+
 
   getSkills = async () => {
     const { repos } = this.state
     const mappedLanguages = []
 
-    const reposLanguages = await Promise.all(repos.map(async ({ languages_url, name }) => ({
+    const reposLanguages = await Promise.all(repos.map(async ({
+      languages_url, // eslint-disable-line
+      name,
+    }) => ({
       languages: await this.getReposLanguages(languages_url),
       data: { repo: name },
     })))
@@ -75,20 +89,19 @@ class App extends Component {
     this.setState({ skills: this.skillsMap(mappedLanguages).filter(l => l.pourcent > 1) })
   }
 
-  getActivity = async () => {
-    const { username } = this.state
-    const { data } = await axios(`https://api.github.com/users/${username}/events${GITHUB_KEY}`)
-    this.setState({ activity: data })
-  }
+  skillsMap = (skills) => {
+    const { size } = skills.reduce((a, b) => ({ size: a.size + b.size }))
 
-  async componentDidMount() {
-    await this.fetchData()
+    return _.sortBy(skills.map(skill => ({
+      ...skill,
+      pourcent: _.round((100 * skill.size) / size, 1),
+    })), ['size']).reverse()
   }
 
   fetchData = async () => {
     await this.getUser()
+    await this.getRepos()
     await this.getSkills()
-    await this.getActivity()
   }
 
   renderEvent = (event) => {
@@ -97,54 +110,74 @@ class App extends Component {
     switch (type) {
       case 'PushEvent':
         return `Push [${event.repo.name}] - ${event.payload.commits[0].message.slice(0, 50)}`
+      case 'IssueCommentEvent':
+        return `Commented an issue on ${event.repo.name}`
+      case 'CreateEvent':
+        return `Created a ${event.payload.ref_type} (${event.repo.name})`
       case 'WatchEvent':
         return `${event.payload.action} - ${event.repo.name}`
       default:
         return type
     }
   }
+  
+  onChangeTab = async (index) => {
+    const { repos, activity } = this.state
 
-  onChange = e => this.setState({ username: e.target.value })
+    this.setState({ currentTab: index })
+    if (index === '1' && repos.length === 0) {
+      await this.getRepos()
+    } else if (index === '2' && activity.length === 0) {
+      await this.getActivity()
+    }
+  }
 
   render() {
     const {
-      repos, skills, activity, username, currentTab,
+      repos, skills, activity, username, currentTab, user,
     } = this.state
 
     return (
       <Layout>
         <Header style={{ color: 'white' }}>
-          User: {username}
+        <Tooltip placement="bottom" title={user.hireable ? 'Open to job offers' : 'Not open to job offers'}>
+            {user.name} {user.location ? `| ${user.location}` : ''}
+            <Badge style={{ marginLeft: 10 }} status={user.hireable ? 'success' : 'error'} />
+          </Tooltip>
+          <i style={{ marginLeft: 10 }}>{user.bio}</i>
+          <b style={{ marginLeft: 20 }}>{user.email ? `- ${user.email}` : ''}</b>
         </Header>
         <Row gutter={48} style={{ background: '#fff' }}>
-          <Col span={12}>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Form layout="inline">
-                <Form.Item>
-                  <Input placeholder="Username" value={username} onChange={this.onChange} />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" onClick={this.fetchData}>Search</Button>
-                </Form.Item>
-              </Form>
+          <Col span={8}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30 }}>
+              <div>
+                <Form layout="inline" style={{ display: 'flex', justifyContent: 'center' }} >
+                  <Form.Item>
+                    <Input placeholder="Username" value={username} onChange={this.onChange} />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" onClick={this.fetchData}>Search</Button>
+                  </Form.Item>
+                </Form>
+                <RadarChart
+                  cx={300}
+                  cy={250}
+                  outerRadius={150}
+                  width={600}
+                  height={500}
+                  data={skills}
+                >
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="name" />
+                  <Radar name="name" dataKey="size" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                </RadarChart>
+              </div>
             </div>
-            <RadarChart
-              cx={300}
-              cy={250}
-              outerRadius={150}
-              width={600}
-              height={500}
-              data={skills}
-            >
-              <PolarGrid />
-              <PolarAngleAxis dataKey="name" />
-              <Radar name="name" dataKey="size" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-            </RadarChart>
           </Col>
           <Col span={10}>
             <Tabs
               defaultActiveKey={currentTab}
-              onChange={e => this.setState({ currentTab: e })}
+              onChange={this.onChangeTab}
             >
               <TabPane tab={`Repositories (${repos.length})`} key="1">
                 <div style={{ margin: 20 }}>

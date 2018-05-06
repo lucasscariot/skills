@@ -22,7 +22,7 @@ import './App.css'
 const { Header } = Layout
 const { TabPane } = Tabs
 
-const GITHUB_KEY = '?access_token=027c1d26e0734fe194f9f1c78db04ba4c1b2d020'
+const GITHUB_KEY = process.env.REACT_APP_GITHUB_KEY ? `?access_token=${process.env.REACT_APP_GITHUB_KEY}` : ''
 
 class App extends Component {
   constructor(props) {
@@ -196,9 +196,9 @@ class App extends Component {
                   <List
                     itemLayout="horizontal"
                     bordered
-                    dataSource={repos.map(s => s.name)}
-                    renderItem={item => (
-                      <List.Item>{item}</List.Item>
+                    dataSource={repos}
+                    renderItem={repo => (
+                      <List.Item><b>{repo.name}</b> {repo.description ? <i>&nbsp;|&nbsp;{repo.description}</i> : ''}</List.Item>
                     )}
                   />
                 </div>
